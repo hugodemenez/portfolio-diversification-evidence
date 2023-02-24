@@ -98,13 +98,9 @@ def random_portfolio(dataframe):
             portfolio["portfolio"]=dataframe.iloc[:, index]*weight
         else:
             portfolio["portfolio"]=portfolio["portfolio"] + dataframe.iloc[:, index]*weight
-
     return portfolio
 
-
-
-
-def draw_markowitz_border(*,directory:str,batch_size:int = 5000):
+def draw_markowitz_border(*,directory:str,batch_size:int = 10000):
     # Load all the datasets from the folder Database/ as pandas DataFrame into a dictionnary
     database = dict(TimeSeries(directory+"/"))
     #Merge all the DataFrames from the database into a single DataFrame
@@ -148,5 +144,10 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 5000):
     plt.colorbar(label='Sharpe Ratio')
     plt.xlabel('Volatility')
     plt.ylabel('Return')
-    plt.scatter(max_sr_vol, max_sr_ret,c='red', s=50) # red dot
-    fig.savefig("markowitz.png")
+    plt.title(directory)
+    plt.scatter(max_sr_vol, max_sr_ret,c='red', s=50,marker="x") # red dot
+    fig.savefig(directory+"markowitz.png")
+
+draw_markowitz_border(directory="Combined")
+draw_markowitz_border(directory="Developed")
+draw_markowitz_border(directory="Emerging")
