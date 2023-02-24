@@ -92,8 +92,6 @@ def random_portfolio(dataframe):
     Returns a randomly generated portfolio from dataframes passed in argument
     """
     weights = rand_weights(dataframe.shape[1])
-    print(weights)
-    input()
     portfolio = pd.DataFrame()
     for index,weight in enumerate(weights):
         if index==0:
