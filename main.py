@@ -52,7 +52,7 @@ def yield_calculation(*,dataframe:pd.DataFrame):
         ],columns=["Yields"])["Yields"]
         
         average_return = new_df.mean()[0]
-        standard_deviation = dataframe.std()[0]
+        standard_deviation = new_df.std()[0]
     return  (average_return,standard_deviation)
 
 
@@ -115,7 +115,7 @@ dataframe = merge_database_to_dataframe(database=database)
 # Remove date from dataframe in order to create the dataframe with yields instead of values
 dataframe = dataframe.drop(columns=["Date"])
 
-number_of_portfolios = 500
+number_of_portfolios = 5000
 means, stds = np.column_stack([
     yield_calculation(dataframe = random_portfolio(dataframe))
     for _ in range(number_of_portfolios)
