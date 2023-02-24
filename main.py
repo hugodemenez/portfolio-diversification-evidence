@@ -104,53 +104,49 @@ def random_portfolio(dataframe):
 
 
 
+def draw_markowitz_border(*,directory:str,batch_size:int = 5000):
+    # Load all the datasets from the folder Database/ as pandas DataFrame into a dictionnary
+    database = dict(TimeSeries(directory+"/"))
+    #Merge all the DataFrames from the database into a single DataFrame
+    dataframe = merge_database_to_dataframe(database=database)
+    # Remove date from dataframe in order to create the dataframe with yields instead of values
+    dataframe = dataframe.drop(columns=["Date"])
+    # Compute the logaritmic return for each dataset
+    log_return = np.log(dataframe/dataframe.shift(1))
+
+    # Defining arrays
+    all_weights = np.zeros((batch_size, len(dataframe.columns)))
+    ret_arr = np.zeros(batch_size)
+    vol_arr = np.zeros(batch_size)
+    sharpe_arr = np.zeros(batch_size)
+
+    # Generating portfolios
+    for x in range(batch_size):
+        # Weights
+        weights = np.array(np.random.random(len(dataframe.columns)))
+        weights = weights/np.sum(weights)
+
+        # Save weights
+        all_weights[x,:] = weights
+
+        # Expected return
+        ret_arr[x] = np.sum( (log_return.mean() * weights))
+
+        # Expected volatility
+        vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(log_return.cov(), weights)))
+
+        # Sharpe Ratio
+        sharpe_arr[x] = ret_arr[x]/vol_arr[x]
 
 
+    max_sr_ret = ret_arr[sharpe_arr.argmax()]
+    max_sr_vol = vol_arr[sharpe_arr.argmax()]
 
 
-# Load all the datasets from the folder Database/ as pandas DataFrame into a dictionnary
-database = dict(TimeSeries("Database/"))
-#Merge all the DataFrames from the database into a single DataFrame
-dataframe = merge_database_to_dataframe(database=database)
-# Remove date from dataframe in order to create the dataframe with yields instead of values
-dataframe = dataframe.drop(columns=["Date"])
-
-log_return = np.log(dataframe/dataframe.shift(1))
-
-
-num_ports = 10000
-all_weights = np.zeros((num_ports, len(dataframe.columns)))
-ret_arr = np.zeros(num_ports)
-vol_arr = np.zeros(num_ports)
-sharpe_arr = np.zeros(num_ports)
-
-for x in range(num_ports):
-    # Weights
-    weights = np.array(np.random.random(len(dataframe.columns)))
-    weights = weights/np.sum(weights)
-    
-    # Save weights
-    all_weights[x,:] = weights
-    
-    # Expected return
-    ret_arr[x] = np.sum( (log_return.mean() * weights * 252))
-    
-    # Expected volatility
-    vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(log_return.cov()*252, weights)))
-    
-    # Sharpe Ratio
-    sharpe_arr[x] = ret_arr[x]/vol_arr[x]
-    
-
-
-max_sr_ret = ret_arr[sharpe_arr.argmax()]
-max_sr_vol = vol_arr[sharpe_arr.argmax()]
-
-
-fig = plt.figure(figsize=(12,8))
-plt.scatter(vol_arr, ret_arr, c=sharpe_arr, cmap='viridis')
-plt.colorbar(label='Sharpe Ratio')
-plt.xlabel('Volatility')
-plt.ylabel('Return')
-plt.scatter(max_sr_vol, max_sr_ret,c='red', s=50) # red dot
-fig.savefig("markowitz.png")
+    fig = plt.figure(figsize=(12,8))
+    plt.scatter(vol_arr, ret_arr, c=sharpe_arr, cmap='viridis')
+    plt.colorbar(label='Sharpe Ratio')
+    plt.xlabel('Volatility')
+    plt.ylabel('Return')
+    plt.scatter(max_sr_vol, max_sr_ret,c='red', s=50) # red dot
+    fig.savefig("markowitz.png")
