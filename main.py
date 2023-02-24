@@ -92,8 +92,6 @@ def random_portfolio(dataframe):
     Returns a randomly generated portfolio from dataframes passed in argument
     """
     weights = rand_weights(dataframe.shape[1])
-    print(weights)
-    input()
     portfolio = pd.DataFrame()
     for index,weight in enumerate(weights):
         if index==0:
@@ -117,15 +115,42 @@ dataframe = merge_database_to_dataframe(database=database)
 # Remove date from dataframe in order to create the dataframe with yields instead of values
 dataframe = dataframe.drop(columns=["Date"])
 
-number_of_portfolios = 500
-means, stds = np.column_stack([
-    yield_calculation(dataframe = random_portfolio(dataframe))
-    for _ in range(number_of_portfolios)
-])
+log_return = np.log(dataframe/dataframe.shift(1))
 
-fig = plt.figure()
-plt.plot(stds, means, 'o', markersize=1)
-plt.xlabel('std')
-plt.ylabel('mean')
-plt.title('Mean and standard deviation of returns of randomly generated portfolios')
-fig.savefig("Figure.png")
+
+num_ports = 6000
+all_weights = np.zeros((num_ports, len(dataframe.columns)))
+ret_arr = np.zeros(num_ports)
+vol_arr = np.zeros(num_ports)
+sharpe_arr = np.zeros(num_ports)
+
+for x in range(num_ports):
+    # Weights
+    weights = np.array(np.random.random(len(dataframe.columns)))
+    weights = weights/np.sum(weights)
+    
+    # Save weights
+    all_weights[x,:] = weights
+    
+    # Expected return
+    ret_arr[x] = np.sum( (log_return.mean() * weights * 252))
+    
+    # Expected volatility
+    vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(log_return.cov()*252, weights)))
+    
+    # Sharpe Ratio
+    sharpe_arr[x] = ret_arr[x]/vol_arr[x]
+    
+
+
+max_sr_ret = ret_arr[sharpe_arr.argmax()]
+max_sr_vol = vol_arr[sharpe_arr.argmax()]
+
+
+plt.figure(figsize=(12,8))
+plt.scatter(vol_arr, ret_arr, c=sharpe_arr, cmap='viridis')
+plt.colorbar(label='Sharpe Ratio')
+plt.xlabel('Volatility')
+plt.ylabel('Return')
+plt.scatter(max_sr_vol, max_sr_ret,c='red', s=50) # red dot
+plt.show()
