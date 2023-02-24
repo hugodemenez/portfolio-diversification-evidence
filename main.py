@@ -118,7 +118,7 @@ dataframe = dataframe.drop(columns=["Date"])
 log_return = np.log(dataframe/dataframe.shift(1))
 
 
-num_ports = 6000
+num_ports = 10000
 all_weights = np.zeros((num_ports, len(dataframe.columns)))
 ret_arr = np.zeros(num_ports)
 vol_arr = np.zeros(num_ports)
@@ -147,10 +147,10 @@ max_sr_ret = ret_arr[sharpe_arr.argmax()]
 max_sr_vol = vol_arr[sharpe_arr.argmax()]
 
 
-plt.figure(figsize=(12,8))
+fig = plt.figure(figsize=(12,8))
 plt.scatter(vol_arr, ret_arr, c=sharpe_arr, cmap='viridis')
 plt.colorbar(label='Sharpe Ratio')
 plt.xlabel('Volatility')
 plt.ylabel('Return')
 plt.scatter(max_sr_vol, max_sr_ret,c='red', s=50) # red dot
-plt.show()
+fig.savefig("markowitz.png")
