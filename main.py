@@ -107,6 +107,15 @@ def random_portfolio(dataframe):
     return portfolio
 
 def draw_markowitz_border(*,directory:str,batch_size:int = 50000):
+    """Draws the Markowitz border through a simulation of porfolio built 
+    based on data hosted in the directory passed in argument
+
+    The Markowitz drawing is saved as the name of  {directory_name}_markowitz.png
+
+    Args:
+        directory (str): Directory hosting datasets (obtained from Yahoo Finance)
+        batch_size (int, optional): Number of portfolio simulation. Defaults to 50000.
+    """
     # Load all the datasets from the folder Database/ as pandas DataFrame into a dictionnary
     database = dict(TimeSeries(directory+"/"))
     #Merge all the DataFrames from the database into a single DataFrame
@@ -153,9 +162,12 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 50000):
     plt.ylabel('Return')
     plt.title(f"Markowitz border for {directory} indexes")
     plt.scatter(max_sr_vol, max_sr_ret,c='red', s=50,marker="x") # red dot
-    fig.savefig(directory+"markowitz.png")
 
+    #Creates the output folder if it doesn't exist
+    if not os.path.exists("./output/"):
+        os.makedirs("output")
 
+    fig.savefig(f"./output/{directory}_markowitz.png")
 
 
 draw_markowitz_border(directory="Combined")
