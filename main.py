@@ -1,3 +1,6 @@
+"""Insppired by https://towardsdatascience.com/python-markowitz-optimization-b5e1623060f5
+"""
+
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
@@ -36,21 +39,21 @@ class TimeSeries:
             dataframe: dataframe loaded with the path provided in
                 the class initialization combined with the csv files read in the directory
         """
-        df = pd.read_csv(self.path+file)
-        return keep_column(dataframe=df,col="Adj Close")
+        dataframe = pd.read_csv(self.path+file)
+        return keep_column(dataframe=dataframe,col="Adj Close")
 
 
 
 def yield_calculation(*,dataframe:pd.DataFrame):
     new_df = pd.DataFrame()
-    for key,value in dataframe.items():
+    for key,_ in dataframe.items():
         new_df[key]= pd.DataFrame([
             (dataframe[key][row_number] / dataframe[key][row_number-1])
                     / dataframe[key][row_number-1]
             for row_number in range(len(dataframe[key]))
             if row_number != 0 and row_number !=len(dataframe[key])
         ],columns=["Yields"])["Yields"]
-        
+
         average_return = new_df.mean()[0]
         standard_deviation = dataframe.std()[0]
     return  (average_return,standard_deviation)
@@ -79,6 +82,9 @@ def merge_database_to_dataframe(*,database:dict):
         else:
             dataframe = pd.merge(dataframe, value,on="Date")
 
+    dataframe['Date'] = pd.to_datetime(dataframe['Date'])
+    # We only keep data after 2015
+    dataframe = dataframe[~(dataframe['Date'] < '2015-01-01')]
     return dataframe
 
 def rand_weights(number_of_assets):
@@ -100,7 +106,7 @@ def random_portfolio(dataframe):
             portfolio["portfolio"]=portfolio["portfolio"] + dataframe.iloc[:, index]*weight
     return portfolio
 
-def draw_markowitz_border(*,directory:str,batch_size:int = 10000):
+def draw_markowitz_border(*,directory:str,batch_size:int = 50000):
     # Load all the datasets from the folder Database/ as pandas DataFrame into a dictionnary
     database = dict(TimeSeries(directory+"/"))
     #Merge all the DataFrames from the database into a single DataFrame
@@ -108,7 +114,7 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 10000):
     # Remove date from dataframe in order to create the dataframe with yields instead of values
     dataframe = dataframe.drop(columns=["Date"])
     # Compute the logaritmic return for each dataset
-    log_return = np.log(dataframe/dataframe.shift(1))
+    returns = (dataframe/dataframe.shift(1)).sub(1)
 
     # Defining arrays
     all_weights = np.zeros((batch_size, len(dataframe.columns)))
@@ -117,6 +123,7 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 10000):
     sharpe_arr = np.zeros(batch_size)
 
     # Generating portfolios
+    np.random.seed(22)
     for x in range(batch_size):
         # Weights
         weights = np.array(np.random.random(len(dataframe.columns)))
@@ -126,10 +133,10 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 10000):
         all_weights[x,:] = weights
 
         # Expected return
-        ret_arr[x] = np.sum( (log_return.mean() * weights))
+        ret_arr[x] = np.sum( (returns.mean() * weights)*252)
 
         # Expected volatility
-        vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(log_return.cov(), weights)))
+        vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(returns.cov(), weights)*252))
 
         # Sharpe Ratio
         sharpe_arr[x] = ret_arr[x]/vol_arr[x]
@@ -144,9 +151,12 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 10000):
     plt.colorbar(label='Sharpe Ratio')
     plt.xlabel('Volatility')
     plt.ylabel('Return')
-    plt.title(directory)
+    plt.title(f"Markowitz border for {directory} indexes")
     plt.scatter(max_sr_vol, max_sr_ret,c='red', s=50,marker="x") # red dot
     fig.savefig(directory+"markowitz.png")
+
+
+
 
 draw_markowitz_border(directory="Combined")
 draw_markowitz_border(directory="Developed")
