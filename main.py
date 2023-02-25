@@ -25,7 +25,7 @@ class TimeSeries:
         Returns:
             list: list of the differents keys of the dictionnary
         """
-        return [file for file in os.listdir(self.path)]
+        return [file for file in os.listdir(f"./input/{self.path}")]
 
     def __getitem__(self, file):
         """This method is called in the initialization of the dictionnary
@@ -39,7 +39,7 @@ class TimeSeries:
             dataframe: dataframe loaded with the path provided in
                 the class initialization combined with the csv files read in the directory
         """
-        dataframe = pd.read_csv(self.path+file)
+        dataframe = pd.read_csv(f"./input/{self.path}{file}")
         return keep_column(dataframe=dataframe,col="Adj Close")
 
 
