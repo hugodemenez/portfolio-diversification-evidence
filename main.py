@@ -62,6 +62,8 @@ class TimeSeries:
                     dataframe[column] = dataframe[column].astype(float)
                 except:
                     pass
+        # Revert dataframe
+        dataframe = dataframe.iloc[::-1]
         return keep_column(dataframe=dataframe,columns=["Date","Dernier"])
 
 
@@ -104,7 +106,7 @@ def merge_database_to_dataframe(*,database:dict):
         }
         for index,column_name in enumerate(value.columns.array):
             if index != 0:
-                mapper[column_name]=key
+                mapper[column_name]=key.replace(" - Données Historiques","")
 
         value = value.rename(columns=mapper)
         if test == 0:
@@ -161,7 +163,7 @@ def draw_correlation_matrix(*, dataframe: pd.DataFrame, directory:str):
 
 
 
-def draw_markowitz_border(*,directory:str,batch_size:int = 10000):
+def draw_markowitz_border(*,directory:str,batch_size:int = 500000):
     """Draws the Markowitz border through a simulation of porfolio built 
     based on data hosted in the directory passed in argument
 
@@ -175,7 +177,7 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 10000):
     database = dict(TimeSeries(directory+"/"))
     #Merge all the DataFrames from the database into a single DataFrame
     dataframe = merge_database_to_dataframe(database=database)
-    print(f"La plage de données est : {dataframe.Date.min()} jusqu'au {dataframe.Date.max()}")
+    print(f"La plage de données pour {directory} est : {dataframe.Date.min()} jusqu'au {dataframe.Date.max()}")
     # Remove date from dataframe in order to create the dataframe with yields instead of values
     dataframe = dataframe.drop(columns=["Date"])
     # Compute the logaritmic return for each dataset
