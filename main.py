@@ -9,11 +9,22 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from typing import List
 
-def keep_column(*,dataframe:pd.DataFrame,col:str):
+def keep_column(*,dataframe:pd.DataFrame,columns:List[str]):
+    """Keeps only provided columns
+
+    Args:
+        dataframe (pd.DataFrame): dataframe
+        columns (List(str)): columns to keep from the dataframe
+
+    Returns:
+        _type_: _description_
+    """
     new_df = pd.DataFrame()
-    new_df["Date"] = dataframe["Date"]
-    new_df[col] = dataframe[col]
+    for column in columns :
+        new_df[column] = dataframe[column]
+
     return new_df
 
 class TimeSeries:
@@ -41,11 +52,30 @@ class TimeSeries:
                 the class initialization combined with the csv files read in the directory
         """
         dataframe = pd.read_csv(f"./input/{self.path}{file}")
-        return keep_column(dataframe=dataframe,col="Adj Close")
+        
+        # Data cleasning
+        for column in dataframe.columns.array:
+            if column !="Date":
+                dataframe[column] = [str(x).replace('.', '') for x in dataframe[column]]
+                dataframe[column] = [x.replace(',', '.') for x in dataframe[column]]
+                try:
+                    dataframe[column] = dataframe[column].astype(float)
+                except:
+                    pass
+        return keep_column(dataframe=dataframe,columns=["Date","Dernier"])
 
 
 
-def yield_calculation(*,dataframe:pd.DataFrame):
+def statistics_calculation(*,dataframe:pd.DataFrame):
+    """Compute the average return and the standard error of the columns
+    of the dataframe
+
+    Args:
+        dataframe (pd.DataFrame): _description_
+
+    Returns:
+        tuple: (average_returns, standard_deviation)
+    """
     new_df = pd.DataFrame()
     for key,_ in dataframe.items():
         new_df[key]= pd.DataFrame([
@@ -74,7 +104,7 @@ def merge_database_to_dataframe(*,database:dict):
         }
         for index,column_name in enumerate(value.columns.array):
             if index != 0:
-                mapper[column_name]=column_name+" "+key
+                mapper[column_name]=key
 
         value = value.rename(columns=mapper)
         if test == 0:
@@ -83,10 +113,10 @@ def merge_database_to_dataframe(*,database:dict):
         else:
             dataframe = pd.merge(dataframe, value,on="Date")
 
-    dataframe['Date'] = pd.to_datetime(dataframe['Date'])
+    dataframe['Date'] = pd.to_datetime(dataframe['Date'],format="%d/%m/%Y")
     # We only keep data after 2013 and before 2018
-    dataframe = dataframe[~(dataframe['Date'] < '2015-01-01')]
-    dataframe = dataframe[~(dataframe['Date'] > '2020-01-01')]
+    dataframe = dataframe[~(dataframe['Date'] < '2013-01-01')]
+    dataframe = dataframe[~(dataframe['Date'] > '2018-01-01')]
 
     return dataframe
 
@@ -122,6 +152,7 @@ def draw_correlation_matrix(*, dataframe: pd.DataFrame, directory:str):
     sns.heatmap(dataframe.corr(method='pearson'), annot=True, fmt='.4f',
             cmap=plt.get_cmap('coolwarm'), cbar=False, ax=canvas)
     canvas.set_yticklabels(canvas.get_yticklabels(), rotation="horizontal")
+    plt.title("Matrice de corrélation entre les rentabilités des différents indices du portefeuille")
     figure.savefig(
         f"./output/{directory}_correlation_matrix.png",
         bbox_inches='tight',
@@ -130,7 +161,7 @@ def draw_correlation_matrix(*, dataframe: pd.DataFrame, directory:str):
 
 
 
-def draw_markowitz_border(*,directory:str,batch_size:int = 1000):
+def draw_markowitz_border(*,directory:str,batch_size:int = 10000):
     """Draws the Markowitz border through a simulation of porfolio built 
     based on data hosted in the directory passed in argument
 
@@ -144,6 +175,7 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 1000):
     database = dict(TimeSeries(directory+"/"))
     #Merge all the DataFrames from the database into a single DataFrame
     dataframe = merge_database_to_dataframe(database=database)
+    print(f"La plage de données est : {dataframe.Date.min()} jusqu'au {dataframe.Date.max()}")
     # Remove date from dataframe in order to create the dataframe with yields instead of values
     dataframe = dataframe.drop(columns=["Date"])
     # Compute the logaritmic return for each dataset
@@ -184,9 +216,9 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 1000):
     fig = plt.figure(figsize=(12,8))
     plt.scatter(vol_arr, ret_arr, c=sharpe_arr, cmap='viridis')
     plt.colorbar(label='Sharpe Ratio')
-    plt.xlabel('Volatility')
-    plt.ylabel('Return')
-    plt.title(f"Markowitz border for {directory} indexes")
+    plt.xlabel('Volatilité')
+    plt.ylabel('Rentabilité')
+    plt.title(f"Frontière de Markowitz pour portefeuille d'indices : {directory}")
     plt.scatter(max_sr_vol, max_sr_ret,c='red', s=50,marker="x") # red dot
 
     #Creates the output folder if it doesn't exist
@@ -195,7 +227,6 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 1000):
 
     fig.savefig(f"./output/{directory}_markowitz.png")
 
-
-draw_markowitz_border(directory="Combined")
-draw_markowitz_border(directory="Developed")
-draw_markowitz_border(directory="Emerging")
+draw_markowitz_border(directory="émergents")
+draw_markowitz_border(directory="développés")
+draw_markowitz_border(directory="combinés")
