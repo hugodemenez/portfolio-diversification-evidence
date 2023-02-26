@@ -1,13 +1,14 @@
 """Insppired by https://towardsdatascience.com/python-markowitz-optimization-b5e1623060f5
 """
 
-import pandas as pd
-import plotly.graph_objects as go
-import numpy as np
+# Standard imports
 import os
-import statistics
-import random
+
+# Other imports
+import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 def keep_column(*,dataframe:pd.DataFrame,col:str):
     new_df = pd.DataFrame()
@@ -83,8 +84,10 @@ def merge_database_to_dataframe(*,database:dict):
             dataframe = pd.merge(dataframe, value,on="Date")
 
     dataframe['Date'] = pd.to_datetime(dataframe['Date'])
-    # We only keep data after 2015
+    # We only keep data after 2013 and before 2018
     dataframe = dataframe[~(dataframe['Date'] < '2015-01-01')]
+    dataframe = dataframe[~(dataframe['Date'] > '2020-01-01')]
+
     return dataframe
 
 def rand_weights(number_of_assets):
@@ -106,7 +109,28 @@ def random_portfolio(dataframe):
             portfolio["portfolio"]=portfolio["portfolio"] + dataframe.iloc[:, index]*weight
     return portfolio
 
-def draw_markowitz_border(*,directory:str,batch_size:int = 50000):
+
+def draw_correlation_matrix(*, dataframe: pd.DataFrame, directory:str):
+    """Draws the correlation matrix among the provided dataframe
+
+    Args:
+        dataframe (pd.DataFrame): DataFrame containing the analyzed datasets
+        directory (str): _description_
+    """
+    # Show correlation matrix
+    figure, canvas = plt.subplots()
+    sns.heatmap(dataframe.corr(method='pearson'), annot=True, fmt='.4f',
+            cmap=plt.get_cmap('coolwarm'), cbar=False, ax=canvas)
+    canvas.set_yticklabels(canvas.get_yticklabels(), rotation="horizontal")
+    figure.savefig(
+        f"./output/{directory}_correlation_matrix.png",
+        bbox_inches='tight',
+        pad_inches=0.0,
+    )
+
+
+
+def draw_markowitz_border(*,directory:str,batch_size:int = 1000):
     """Draws the Markowitz border through a simulation of porfolio built 
     based on data hosted in the directory passed in argument
 
@@ -124,6 +148,8 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 50000):
     dataframe = dataframe.drop(columns=["Date"])
     # Compute the logaritmic return for each dataset
     returns = (dataframe/dataframe.shift(1)).sub(1)
+    # Draws the correlation matrix for returns in DataFrame
+    draw_correlation_matrix(dataframe=returns,directory=directory)
 
     # Defining arrays
     all_weights = np.zeros((batch_size, len(dataframe.columns)))
@@ -145,7 +171,7 @@ def draw_markowitz_border(*,directory:str,batch_size:int = 50000):
         ret_arr[x] = np.sum( (returns.mean() * weights)*252)
 
         # Expected volatility
-        vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(returns.cov(), weights)*252))
+        vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(returns.cov()*252, weights)))
 
         # Sharpe Ratio
         sharpe_arr[x] = ret_arr[x]/vol_arr[x]
